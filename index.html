@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MongoDB Manager</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 30px; text-align: center; }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .section h2 { color: #555; margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }
+        button:hover { background: #0056b3; }
+        button.danger { background: #dc3545; }
+        button.danger:hover { background: #c82333; }
+        .results { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-top: 15px; }
+        .record { background: white; padding: 10px; margin: 10px 0; border-radius: 4px; border: 1px solid #ddd; }
+        .record-id { font-size: 12px; color: #666; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .loading { color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍃 MongoDB Manager</h1>
+        
+        <!-- Configuration -->
+        <div class="section">
+            <h2>⚙️ Configuration</h2>
+            <div class="form-group">
+                <label for="apiUrl">API Gateway URL:</label>
+                <input type="text" id="apiUrl" placeholder="https://your-api-gateway-url/prod/mongo">
+            </div>
+            <button onclick="testConnection()">Test Connection</button>
+            <div id="connectionStatus"></div>
+        </div>
+
+        <!-- Insert Data -->
+        <div class="section">
+            <h2>➕ Insert Document</h2>
+            <div class="form-group">
+                <label for="insertData">JSON Data:</label>
+                <textarea id="insertData" rows="4" placeholder='{"name": "John", "age": 30, "city": "New York"}'></textarea>
+            </div>
+            <button onclick="insertDocument()">Insert</button>
+            <div id="insertResult"></div>
+        </div>
+
+        <!-- Find Data -->
+        <div class="section">
+            <h2>🔍 Find Documents</h2>
+            <div class="form-group">
+                <label for="findQuery">Query (JSON):</label>
+                <textarea id="findQuery" rows="3" placeholder='{"name": "John"} or {} for all'></textarea>
+            </div>
+            <button onclick="findDocuments()">Find</button>
+            <button onclick="findAll()">Find All</button>
+            <div id="findResult"></div>
+        </div>
+
+        <!-- Update Data -->
+        <div class="section">
+            <h2>✏️ Update Documents</h2>
+            <div class="form-group">
+                <label for="updateQuery">Query (JSON):</label>
+                <textarea id="updateQuery" rows="2" placeholder='{"name": "John"}'></textarea>
+            </div>
+            <div class="form-group">
+                <label for="updateData">Update (JSON):</label>
+                <textarea id="updateData" rows="3" placeholder='{"$set": {"age": 31}}'></textarea>
+            </div>
+            <button onclick="updateDocuments()">Update</button>
+            <div id="updateResult"></div>
+        </div>
+
+        <!-- Delete Data -->
+        <div class="section">
+            <h2>🗑️ Delete Documents</h2>
+            <div class="form-group">
+                <label for="deleteQuery">Query (JSON):</label>
+                <textarea id="deleteQuery" rows="2" placeholder='{"name": "John"}'></textarea>
+            </div>
+            <button onclick="deleteDocuments()" class="danger">Delete</button>
+            <div id="deleteResult"></div>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        let API_URL = '';
+
+        // Load API URL from localStorage or prompt user
+        window.onload = function() {
+            const savedUrl = localStorage.getItem('mongoApiUrl');
+            if (savedUrl) {
+                document.getElementById('apiUrl').value = savedUrl;
+                API_URL = savedUrl;
+            }
+        };
+
+        // Save API URL
+        document.getElementById('apiUrl').addEventListener('change', function() {
+            API_URL = this.value;
+            localStorage.setItem('mongoApiUrl', API_URL);
+        });
+
+        // Utility functions
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '<div class="loading">Loading...</div>';
+        }
+
+        async function callAPI(action, data = {}) {
+            if (!API_URL) {
+                throw new Error('Please configure API URL first');
+            }
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: action,
+                    ...data
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        }
+
+        // Test connection
+        async function testConnection() {
+            showLoading('connectionStatus');
+            try {
+                await callAPI('find', { query: {} });
+                showStatus('connectionStatus', '✅ Connection successful!', 'success');
+            } catch (error) {
+                showStatus('connectionStatus', `❌ Connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Insert document
+        async function insertDocument() {
+            showLoading('insertResult');
+            try {
+                const dataText = document.getElementById('insertData').value;
+                if (!dataText.trim()) {
+                    throw new Error('Please enter JSON data');
+                }
+                
+                const data = JSON.parse(dataText);
+                const result = await callAPI('insert', { data: data });
+                
+                showStatus('insertResult', `✅ Document inserted with ID: ${result.inserted_id}`, 'success');
+                document.getElementById('insertData').value = '';
+            } catch (error) {
+                showStatus('insertResult', `❌ Insert failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Find documents
+        async function findDocuments() {
+            showLoading('findResult');
+            try {
+                const queryText = document.getElementById('findQuery').value || '{}';
+                const query = JSON.parse(queryText);
+                const result = await callAPI('find', { query: query });
+                
+                displayDocuments('findResult', result.documents || []);
+            } catch (error) {
+                showStatus('findResult', `❌ Find failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Find all documents
+        async function findAll() {
+            document.getElementById('findQuery').value = '{}';
+            await findDocuments();
+        }
+
+        // Update documents
+        async function updateDocuments() {
+            showLoading('updateResult');
+            try {
+                const queryText = document.getElementById('updateQuery').value;
+                const updateText = document.getElementById('updateData').value;
+                
+                if (!queryText.trim() || !updateText.trim()) {
+                    throw new Error('Please enter both query and update data');
+                }
+                
+                const query = JSON.parse(queryText);
+                const update = JSON.parse(updateText);
+                const result = await callAPI('update', { query: query, update: update });
+                
+                showStatus('updateResult', `✅ Updated ${result.modified_count} document(s)`, 'success');
+            } catch (error) {
+                showStatus('updateResult', `❌ Update failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Delete documents
+        async function deleteDocuments() {
+            if (!confirm('Are you sure you want to delete these documents?')) {
+                return;
+            }
+            
+            showLoading('deleteResult');
+            try {
+                const queryText = document.getElementById('deleteQuery').value;
+                if (!queryText.trim()) {
+                    throw new Error('Please enter a query');
+                }
+                
+                const query = JSON.parse(queryText);
+                const result = await callAPI('delete', { query: query });
+                
+                showStatus('deleteResult', `✅ Deleted ${result.deleted_count} document(s)`, 'success');
+            } catch (error) {
+                showStatus('deleteResult', `❌ Delete failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Display documents
+        function displayDocuments(elementId, documents) {
+            const element = document.getElementById(elementId);
+            
+            if (documents.length === 0) {
+                element.innerHTML = '<div class="status">No documents found</div>';
+                return;
+            }
+            
+            let html = `<div class="results"><h3>Found ${documents.length} document(s):</h3>`;
+            documents.forEach(doc => {
+                html += `
+                    <div class="record">
+                        <div class="record-id">ID: ${doc._id}</div>
+                        <pre>${JSON.stringify(doc, null, 2)}</pre>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            element.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="5.0" etag="xxx" version="22.1.16" type="device">
+  <diagram name="AWS MongoDB Lambda Phase 2 - Private" id="aws-mongo-lambda-phase2">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- AWS Cloud Container -->
+        <mxCell id="aws-cloud" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="50" width="1050" height="700" as="geometry" />
+        </mxCell>
+        <mxCell id="aws-label" value="AWS Cloud (us-east-1) - PHASE 2: PRIVATE SETUP" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="70" y="60" width="400" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- VPC Container -->
+        <mxCell id="vpc" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="120" width="950" height="580" as="geometry" />
+        </mxCell>
+        <mxCell id="vpc-label" value="VPC: mongo-vpc&#xa;CIDR: 10.0.0.0/16&#xa;🔒 PRIVATE ONLY - NO INTERNET ACCESS" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;fontColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="120" y="130" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Private Subnet -->
+        <mxCell id="subnet" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="150" y="220" width="850" height="430" as="geometry" />
+        </mxCell>
+        <mxCell id="subnet-label" value="Private Subnet: mongo-private-subnet&#xa;CIDR: 10.0.1.0/24&#xa;AZ: us-east-1a&#xa;❌ NO PUBLIC IP ASSIGNMENT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="170" y="230" width="250" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- EC2 Instance (Private) -->
+        <mxCell id="ec2" value="EC2 Instance&#xa;mongo-server-private&#xa;&#xa;Type: t2.micro&#xa;OS: Ubuntu 20.04&#xa;MongoDB: 6.0&#xa;&#xa;❌ NO Public IP&#xa;✅ Private IP: 10.0.1.x&#xa;❌ NO SSH Access" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="350" width="180" height="140" as="geometry" />
+        </mxCell>
+
+        <!-- MongoDB Icon -->
+        <mxCell id="mongodb" value="MongoDB&#xa;Port: 27017&#xa;&#xa;Database: testdb&#xa;Collection: testcol&#xa;&#xa;🔒 PRIVATE ONLY" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="350" y="520" width="80" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Lambda Function -->
+        <mxCell id="lambda" value="Lambda Function&#xa;mongo-client&#xa;&#xa;Runtime: Python 3.9&#xa;Handler: lambda_function.lambda_handler&#xa;Timeout: 30s&#xa;&#xa;VPC-Enabled&#xa;Environment:&#xa;MONGO_HOST=10.0.1.x&#xa;&#xa;✅ ONLY ACCESS TO MONGODB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="600" y="350" width="180" height="140" as="geometry" />
+        </mxCell>
+
+        <!-- Lambda Layer -->
+        <mxCell id="lambda-layer" value="Lambda Layer&#xa;pymongo&#xa;&#xa;Runtime: Python 3.9&#xa;Dependencies:&#xa;- pymongo library" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="600" y="520" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Security Groups -->
+        <mxCell id="sg-ec2" value="Security Group&#xa;mongo-ec2-sg&#xa;&#xa;Inbound:&#xa;• MongoDB (27017) from Lambda SG ONLY&#xa;❌ NO SSH (Port 22)&#xa;❌ NO Public Access&#xa;&#xa;Outbound:&#xa;❌ NO Internet Access" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="170" y="350" width="120" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sg-lambda" value="Security Group&#xa;mongo-lambda-sg&#xa;&#xa;Inbound:&#xa;• None&#xa;&#xa;Outbound:&#xa;• MongoDB (27017) to EC2 SG ONLY" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="820" y="350" width="150" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- IAM Role -->
+        <mxCell id="iam-role" value="IAM Role&#xa;mongo-lambda-role&#xa;&#xa;Policies:&#xa;• AWSLambdaVPCAccessExecutionRole&#xa;&#xa;Allows Lambda to:&#xa;• Create ENI in VPC&#xa;• Write CloudWatch logs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="820" y="480" width="150" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Developer/User (External) -->
+        <mxCell id="user" value="Developer/User&#xa;&#xa;Access Methods:&#xa;• AWS Console&#xa;• AWS CLI&#xa;• SDK&#xa;❌ NO SSH Access&#xa;❌ NO Direct EC2 Access" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="350" width="120" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Connection Lines -->
+        <!-- User to Lambda (via AWS services) -->
+        <mxCell id="conn1" value="Invokes Lambda&#xa;(AWS Console/CLI only)" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;strokeColor=#666666;" edge="1" parent="1" source="user" target="lambda">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="170" y="410" as="sourcePoint" />
+            <mxPoint x="600" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Lambda to MongoDB (Private Network) -->
+        <mxCell id="conn2" value="10.0.1.x:27017&#xa;(Private Network ONLY)" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;strokeColor=#d6b656;" edge="1" parent="1" source="lambda" target="mongodb">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="450" as="sourcePoint" />
+            <mxPoint x="430" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- EC2 to MongoDB (localhost) -->
+        <mxCell id="conn3" value="localhost:27017" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="1" source="ec2" target="mongodb">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="490" as="sourcePoint" />
+            <mxPoint x="390" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Lambda Layer to Lambda -->
+        <mxCell id="conn4" value="Attached" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;strokeColor=#9673a6;dashed=1;" edge="1" parent="1" source="lambda-layer" target="lambda">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="690" y="520" as="sourcePoint" />
+            <mxPoint x="690" y="490" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- IAM Role to Lambda -->
+        <mxCell id="conn5" value="Assumes" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;strokeColor=#9673a6;dashed=1;" edge="1" parent="1" source="iam-role" target="lambda">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="820" y="540" as="sourcePoint" />
+            <mxPoint x="780" y="490" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Security Group associations -->
+        <mxCell id="conn6" value="Applied to" style="endArrow=classic;html=1;rounded=0;strokeWidth=1;strokeColor=#b85450;dashed=1;" edge="1" parent="1" source="sg-ec2" target="ec2">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="290" y="410" as="sourcePoint" />
+            <mxPoint x="300" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="conn7" value="Applied to" style="endArrow=classic;html=1;rounded=0;strokeWidth=1;strokeColor=#b85450;dashed=1;" edge="1" parent="1" source="sg-lambda" target="lambda">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="820" y="400" as="sourcePoint" />
+            <mxPoint x="780" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Blocked connections (X marks) -->
+        <mxCell id="blocked-ssh" value="❌ SSH BLOCKED" style="text;html=1;strokeColor=#b85450;fillColor=#f8cecc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="200" y="300" width="100" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="blocked-internet" value="❌ INTERNET BLOCKED" style="text;html=1;strokeColor=#b85450;fillColor=#f8cecc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="340" y="300" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Outputs Box -->
+        <mxCell id="outputs" value="Terraform Outputs:&#xa;&#xa;❌ NO ec2_public_ip&#xa;✅ ec2_private_ip: 10.0.1.x&#xa;✅ lambda_function_name: mongo-client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="170" y="480" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Data Flow Labels -->
+        <mxCell id="flow1" value="1. User invokes Lambda&#xa;(AWS Console/CLI only)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="300" y="320" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="flow2" value="2. Lambda connects to MongoDB&#xa;via private network ONLY" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="480" y="420" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="flow3" value="3. MongoDB operations&#xa;(insert/find/update/delete)&#xa;PRIVATE ONLY" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="480" y="580" width="120" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Security Benefits Box -->
+        <mxCell id="security-benefits" value="🔒 SECURITY BENEFITS:&#xa;&#xa;✅ No public attack surface&#xa;✅ No SSH vulnerabilities&#xa;✅ No internet access from EC2&#xa;✅ Lambda-only database access&#xa;✅ VPC network isolation&#xa;✅ Minimal security groups" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="820" y="220" width="150" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Phase Comparison -->
+        <mxCell id="phase-comparison" value="PHASE 2 vs PHASE 1:&#xa;&#xa;❌ REMOVED: Internet Gateway&#xa;❌ REMOVED: Route Table&#xa;❌ REMOVED: Public IP&#xa;❌ REMOVED: SSH Access&#xa;❌ REMOVED: Key Pair&#xa;✅ KEPT: VPC, Lambda, MongoDB&#xa;✅ KEPT: All data intact" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="220" width="150" height="120" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
