@@ -5,9 +5,11 @@ zip lambda_function.zip lambda_function_api.py
 
 # Create pymongo layer
 mkdir -p python
-pip install pymongo -t python/
+# Use virtual environment to avoid externally managed environment error
+python3 -m venv temp_venv
+temp_venv/bin/pip install pymongo -t python/
 zip -r pymongo-layer.zip python/
-rm -rf python/
+rm -rf python/ temp_venv/
 
 # Deploy Phase 3 with API Gateway
 cp main-api.tf main.tf

@@ -110,7 +110,7 @@ resource "aws_key_pair" "main" {
 # EC2 Instance
 resource "aws_instance" "mongo" {
   ami                    = data.aws_ami.ubuntu.id
-  instance_type          = "t2.micro"
+  instance_type          = "t3.micro"
   key_name              = aws_key_pair.main.key_name
   vpc_security_group_ids = [aws_security_group.ec2.id]
   subnet_id             = aws_subnet.main.id

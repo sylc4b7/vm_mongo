@@ -1,0 +1,17 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+
+# Lambda packages
+*.zip
+
+# Temporary files
+response.json
+payload.json
+
+# OS
+.DS_Store
+Thumbs.db
