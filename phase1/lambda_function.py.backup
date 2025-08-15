@@ -9,7 +9,7 @@ def lambda_handler(event, context):
     Handles multiple HTTP methods and endpoints
     """
     
-    # CORS headers for all API responses
+    # CORS headers for all responses
     cors_headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',

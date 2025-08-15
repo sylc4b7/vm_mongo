@@ -1,3 +1,61 @@
+#!/bin/bash
+
+echo "=== Enhanced MongoDB API Gateway Deployment (Fixed) ==="
+echo ""
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Check if required files exist
+if [ ! -f "variables.tf" ]; then
+    echo -e "${RED}Error: variables.tf not found${NC}"
+    exit 1
+fi
+
+if [ ! -f "install_mongo.sh" ]; then
+    echo -e "${RED}Error: install_mongo.sh not found${NC}"
+    exit 1
+fi
+
+echo -e "${YELLOW}Step 1: Cleaning up conflicting files...${NC}"
+
+# Backup all current files
+if [ -f "main.tf" ]; then
+    cp main.tf main.tf.backup
+    echo "   Backed up main.tf"
+fi
+
+if [ -f "outputs.tf" ]; then
+    cp outputs.tf outputs.tf.backup
+    echo "   Backed up outputs.tf"
+fi
+
+if [ -f "lambda_function.py" ]; then
+    cp lambda_function.py lambda_function.py.backup
+    echo "   Backed up lambda_function.py"
+fi
+
+# Remove conflicting standalone files (they'll be integrated into main.tf)
+if [ -f "api-gateway-enhanced.tf" ]; then
+    mv api-gateway-enhanced.tf api-gateway-enhanced.tf.backup
+    echo "   Moved api-gateway-enhanced.tf to backup (will be integrated)"
+fi
+
+if [ -f "outputs-enhanced.tf" ]; then
+    mv outputs-enhanced.tf outputs-enhanced.tf.backup
+    echo "   Moved outputs-enhanced.tf to backup (will be integrated)"
+fi
+
+echo -e "${GREEN}   Cleanup completed${NC}"
+
+echo -e "${YELLOW}Step 2: Creating integrated main.tf...${NC}"
+
+# Create complete main.tf with everything integrated
+cat > main.tf << 'EOF'
 terraform {
   required_providers {
     aws = {
@@ -153,7 +211,6 @@ resource "aws_lambda_function" "mongo_client" {
   handler         = "lambda_function.lambda_handler"
   runtime         = "python3.9"
   timeout         = 30
-  source_code_hash = filebase64sha256("lambda_function.zip")
   
   vpc_config {
     subnet_ids         = [aws_subnet.main.id]
@@ -176,23 +233,6 @@ resource "aws_lambda_layer_version" "pymongo" {
   
   compatible_runtimes = ["python3.9"]
 }
-
-# Data sources
-data "aws_availability_zones" "available" {
-  state = "available"
-}
-
-data "aws_ami" "ubuntu" {
-  most_recent = true
-  owners      = ["099720109477"]
-  
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
-  }
-}
-# Enhanced API Gateway with Multiple Endpoints
-# This provides RESTful endpoints for testers
 
 # API Gateway REST API
 resource "aws_api_gateway_rest_api" "mongo_api" {
@@ -226,7 +266,6 @@ resource "aws_api_gateway_resource" "health" {
 }
 
 # Methods for /api/documents
-# GET /api/documents (find all)
 resource "aws_api_gateway_method" "documents_get" {
   rest_api_id   = aws_api_gateway_rest_api.mongo_api.id
   resource_id   = aws_api_gateway_resource.documents.id
@@ -234,7 +273,6 @@ resource "aws_api_gateway_method" "documents_get" {
   authorization = "NONE"
 }
 
-# POST /api/documents (create)
 resource "aws_api_gateway_method" "documents_post" {
   rest_api_id   = aws_api_gateway_rest_api.mongo_api.id
   resource_id   = aws_api_gateway_resource.documents.id
@@ -242,7 +280,6 @@ resource "aws_api_gateway_method" "documents_post" {
   authorization = "NONE"
 }
 
-# PUT /api/documents (update)
 resource "aws_api_gateway_method" "documents_put" {
   rest_api_id   = aws_api_gateway_rest_api.mongo_api.id
   resource_id   = aws_api_gateway_resource.documents.id
@@ -250,7 +287,6 @@ resource "aws_api_gateway_method" "documents_put" {
   authorization = "NONE"
 }
 
-# DELETE /api/documents (delete)
 resource "aws_api_gateway_method" "documents_delete" {
   rest_api_id   = aws_api_gateway_rest_api.mongo_api.id
   resource_id   = aws_api_gateway_resource.documents.id
@@ -258,7 +294,6 @@ resource "aws_api_gateway_method" "documents_delete" {
   authorization = "NONE"
 }
 
-# GET /api/health (health check)
 resource "aws_api_gateway_method" "health_get" {
   rest_api_id   = aws_api_gateway_rest_api.mongo_api.id
   resource_id   = aws_api_gateway_resource.health.id
@@ -317,7 +352,7 @@ resource "aws_api_gateway_integration" "health_get" {
   uri                    = aws_lambda_function.mongo_client.invoke_arn
 }
 
-# CORS Support for all methods
+# CORS Support
 resource "aws_api_gateway_method" "documents_options" {
   rest_api_id   = aws_api_gateway_rest_api.mongo_api.id
   resource_id   = aws_api_gateway_resource.documents.id
@@ -332,7 +367,6 @@ resource "aws_api_gateway_method" "health_options" {
   authorization = "NONE"
 }
 
-# CORS Integration
 resource "aws_api_gateway_integration" "documents_options" {
   rest_api_id = aws_api_gateway_rest_api.mongo_api.id
   resource_id = aws_api_gateway_resource.documents.id
@@ -359,7 +393,6 @@ resource "aws_api_gateway_integration" "health_options" {
   }
 }
 
-# CORS Method Responses
 resource "aws_api_gateway_method_response" "documents_options" {
   rest_api_id = aws_api_gateway_rest_api.mongo_api.id
   resource_id = aws_api_gateway_resource.documents.id
@@ -386,7 +419,6 @@ resource "aws_api_gateway_method_response" "health_options" {
   }
 }
 
-# CORS Integration Responses
 resource "aws_api_gateway_integration_response" "documents_options" {
   rest_api_id = aws_api_gateway_rest_api.mongo_api.id
   resource_id = aws_api_gateway_resource.documents.id
@@ -440,3 +472,148 @@ resource "aws_api_gateway_deployment" "mongo_api" {
   rest_api_id = aws_api_gateway_rest_api.mongo_api.id
   stage_name  = "prod"
 }
+
+# Data sources
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"]
+  
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+  }
+}
+EOF
+
+echo -e "${GREEN}   Integrated main.tf created${NC}"
+
+echo -e "${YELLOW}Step 3: Creating integrated outputs.tf...${NC}"
+
+cat > outputs.tf << 'EOF'
+output "ec2_private_ip" {
+  description = "Private IP of EC2 instance"
+  value       = aws_instance.mongo.private_ip
+}
+
+output "lambda_function_name" {
+  description = "Lambda function name"
+  value       = aws_lambda_function.mongo_client.function_name
+}
+
+output "api_gateway_id" {
+  description = "API Gateway REST API ID"
+  value       = aws_api_gateway_rest_api.mongo_api.id
+}
+
+output "api_gateway_base_url" {
+  description = "API Gateway base URL"
+  value       = "https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod"
+}
+
+output "api_endpoints" {
+  description = "Available API endpoints for testing"
+  value = {
+    health_check = "https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/health"
+    documents_base = "https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents"
+  }
+}
+
+output "curl_examples" {
+  description = "Example curl commands for testing"
+  value = {
+    health_check = "curl -X GET https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/health"
+    
+    create_document = "curl -X POST https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents -H 'Content-Type: application/json' -d '{\"name\":\"test\",\"status\":\"active\"}'"
+    
+    get_all_documents = "curl -X GET https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents"
+    
+    get_filtered_documents = "curl -X GET 'https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents?filter={\"status\":\"active\"}'"
+    
+    update_documents = "curl -X PUT https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents -H 'Content-Type: application/json' -d '{\"query\":{\"status\":\"active\"},\"update\":{\"$set\":{\"status\":\"completed\"}}}'"
+    
+    delete_documents = "curl -X DELETE 'https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents?filter={\"status\":\"completed\"}'"
+  }
+}
+EOF
+
+echo -e "${GREEN}   Integrated outputs.tf created${NC}"
+
+echo -e "${YELLOW}Step 4: Updating Lambda function...${NC}"
+
+# Copy enhanced lambda function
+cp lambda_function_enhanced.py lambda_function.py
+echo -e "${GREEN}   Lambda function updated${NC}"
+
+echo -e "${YELLOW}Step 5: Packaging Lambda function...${NC}"
+
+# Remove old zip if exists
+rm -f lambda_function.zip
+
+# Create new zip
+zip lambda_function.zip lambda_function.py
+echo -e "${GREEN}   Lambda function packaged${NC}"
+
+echo -e "${YELLOW}Step 6: Deploying infrastructure...${NC}"
+
+# Initialize Terraform
+terraform init
+
+# Plan deployment
+echo "   Running terraform plan..."
+terraform plan
+
+# Ask for confirmation
+echo ""
+read -p "Do you want to apply these changes? (y/N): " -n 1 -r
+echo ""
+
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "   Applying changes..."
+    terraform apply -auto-approve
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✅ Deployment successful!${NC}"
+        echo ""
+        
+        # Display outputs
+        echo -e "${BLUE}=== DEPLOYMENT OUTPUTS ===${NC}"
+        terraform output
+        
+        echo ""
+        echo -e "${BLUE}=== TESTING ===${NC}"
+        echo "You can now test the API using:"
+        echo "  ./test-api-enhanced.sh"
+        echo ""
+        echo "Or manually test the health endpoint:"
+        API_BASE_URL=$(terraform output -raw api_gateway_base_url 2>/dev/null)
+        if [ ! -z "$API_BASE_URL" ]; then
+            echo "  curl -X GET $API_BASE_URL/api/health"
+        fi
+        
+    else
+        echo -e "${RED}❌ Deployment failed${NC}"
+        exit 1
+    fi
+else
+    echo "Deployment cancelled."
+fi
+
+echo ""
+echo -e "${GREEN}Enhanced API Gateway deployment completed!${NC}"
+echo ""
+echo -e "${BLUE}Final file structure:${NC}"
+echo "  main.tf (integrated - all infrastructure)"
+echo "  outputs.tf (integrated - all outputs)"  
+echo "  variables.tf (unchanged)"
+echo "  lambda_function.py (enhanced)"
+echo ""
+echo -e "${BLUE}Backup files created:${NC}"
+echo "  main.tf.backup"
+echo "  outputs.tf.backup"
+echo "  lambda_function.py.backup"
+echo "  api-gateway-enhanced.tf.backup"
+echo "  outputs-enhanced.tf.backup"

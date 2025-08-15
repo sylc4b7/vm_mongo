@@ -6,199 +6,153 @@
 - AWS CLI configured: aws configure
 - Terraform installed
 - Python 3.9+ with pip
+- SSH key pair: ~/.ssh/id_rsa (public key in ~/.ssh/id_rsa.pub)
 ```
 
 ---
 
-# Phase 1: Public Setup (Development)
+# Current Setup: API Gateway + Private EC2
 
 ## Files Used:
-- `main.tf` (original)
-- `outputs.tf` (original)
-- `deploy.sh`
-- `lambda_function.py`
-- `install_mongo.sh`
+- `main.tf` - Infrastructure with VPC, EC2, Lambda, API Gateway
+- `outputs.tf` - Outputs including public IP for testing
+- `lambda_function.py` - Enhanced Lambda with API Gateway integration
+- `install_mongo.sh` - MongoDB installation script
+- `test-ec2-connectivity.sh` - EC2 and MongoDB connectivity tests
+- `test-api-enhanced.sh` - Complete API testing suite
 
 ## Deployment Steps:
 ```bash
-# 1. Deploy infrastructure
-bash deploy.sh
+# 1. Create Lambda deployment package
+zip lambda_function.zip lambda_function.py
 
-# 2. Wait for completion (~5 minutes)
+# 2. Create pymongo layer
+mkdir -p python/lib/python3.9/site-packages
+pip install pymongo -t python/lib/python3.9/site-packages/
+zip -r pymongo-layer.zip python/
+
+# 3. Deploy infrastructure
+terraform init
+terraform plan
+terraform apply
+
+# 4. Wait for completion (~5-8 minutes)
 ```
 
 ## Expected Outputs:
 ```
-ec2_public_ip = "54.123.45.67"
-ec2_private_ip = "10.0.1.123"
+ec2_public_ip = "44.203.243.211"
+ec2_private_ip = "10.0.1.107"
 lambda_function_name = "mongo-client"
+api_gateway_base_url = "https://5crqbngzz8.execute-api.us-east-1.amazonaws.com/prod"
 ```
 
-## Tests:
+## Testing:
+
+### 1. EC2 & MongoDB Connectivity Test:
 ```bash
-# 1. SSH to EC2
-ssh -i ~/.ssh/id_rsa ubuntu@54.123.45.67
+# Run comprehensive connectivity test
+bash test-ec2-connectivity.sh
 
-# 2. Check MongoDB on EC2
-ubuntu@ip-10-0-1-123:~$ sudo systemctl status mongod
-● mongod.service - MongoDB Database Server
-   Active: active (running)
+# Expected results:
+# ✅ SSH connectivity to EC2
+# ✅ MongoDB service running
+# ✅ MongoDB listening on port 27017
+# ✅ MongoDB connection test
+# ✅ Create test document
+# ✅ Read test document
+# ✅ Network rules configured
+```
 
-# 3. Test Lambda function
-aws lambda invoke --function-name mongo-client \
-  --payload '{"action":"insert","data":{"name":"test","value":123}}' \
-  response.json
+### 2. API Gateway Integration Test:
+```bash
+# Run complete API test suite
+bash test-api-enhanced.sh
 
-cat response.json
-# Expected: {"statusCode": 200, "body": "{\"inserted_id\": \"...\"}"} 
+# Expected results:
+# ✅ Health check endpoint
+# ✅ Create documents
+# ✅ Get all documents
+# ✅ Get filtered documents
+# ✅ Update documents
+# ✅ Pagination
+# ✅ CORS headers
+# ✅ Error handling
+# ✅ Delete documents
+```
 
-# 4. Test find operation
-aws lambda invoke --function-name mongo-client \
-  --payload '{"action":"find","query":{}}' \
-  response.json
+### 3. Manual API Testing:
+```bash
+# Get API URL
+API_URL=$(terraform output -raw api_gateway_base_url)
 
-cat response.json
-# Expected: {"statusCode": 200, "body": "{\"documents\": [...]}"} 
+# Health check
+curl -X GET $API_URL/api/health
+
+# Create document
+curl -X POST $API_URL/api/documents \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"test","status":"active"}'
+
+# Get all documents
+curl -X GET $API_URL/api/documents
+
+# Get filtered documents
+curl -X GET "$API_URL/api/documents?filter={\"status\":\"active\"}"
+
+# Update documents
+curl -X PUT $API_URL/api/documents \
+  -H 'Content-Type: application/json' \
+  -d '{"query":{"status":"active"},"update":{"$set":{"status":"completed"}}}'
+
+# Delete documents
+curl -X DELETE "$API_URL/api/documents?filter={\"status\":\"completed\"}"
 ```
 
 ## Success Criteria:
-- ✅ EC2 has public IP and SSH access
-- ✅ MongoDB running on EC2
-- ✅ Lambda can connect to MongoDB
-- ✅ Data persists in MongoDB
+- ✅ EC2 has public IP for testing access
+- ✅ MongoDB running on EC2 (mongosh available)
+- ✅ Lambda connects to MongoDB via VPC
+- ✅ API Gateway provides RESTful endpoints
+- ✅ CORS enabled for browser access
+- ✅ All CRUD operations working
 
 ---
 
-# Phase 2: Private Setup (Production)
+# Production Hardening (Optional)
 
-## Files Used:
-- `main-private.tf`
-- `outputs-private.tf`
-
-## Migration Steps:
+## Remove Public IP for Production:
 ```bash
-# 1. Backup current config
-cp main.tf main-public-backup.tf
-cp outputs.tf outputs-public-backup.tf
+# 1. Remove public IP assignment
+# Edit main.tf, change:
+# map_public_ip_on_launch = true
+# to:
+# map_public_ip_on_launch = false
 
-# 2. Switch to private config
-cp main-private.tf main.tf
-cp outputs-private.tf outputs.tf
+# 2. Remove ec2_public_ip from outputs.tf
 
 # 3. Apply changes
 terraform plan
 terraform apply
 ```
 
-## Expected Outputs:
-```
-ec2_private_ip = "10.0.1.123"
-lambda_function_name = "mongo-client"
-# Note: No public IP output
-```
+## Expected Changes:
+- ❌ SSH access blocked (no public IP)
+- ✅ API Gateway still works
+- ✅ Lambda still connects via VPC
+- ✅ MongoDB data preserved
 
-## Tests:
+## Security Improvements:
 ```bash
-# 1. Verify SSH is blocked
-ssh -i ~/.ssh/id_rsa ubuntu@10.0.1.123
-# Expected: Connection timeout (no public IP)
+# 1. Restrict security group to Lambda only
+# Edit main.tf security group rules
 
-# 2. Test Lambda still works
-aws lambda invoke --function-name mongo-client \
-  --payload '{"action":"find","query":{}}' \
-  response.json
+# 2. Enable VPC Flow Logs
+# Add VPC flow logs resource
 
-cat response.json
-# Expected: Previous data still exists
-
-# 3. Test insert still works
-aws lambda invoke --function-name mongo-client \
-  --payload '{"action":"insert","data":{"phase":"2","secure":true}}' \
-  response.json
+# 3. Add CloudWatch monitoring
+# Add CloudWatch alarms for Lambda errors
 ```
-
-## Success Criteria:
-- ✅ No public IP on EC2
-- ✅ SSH access blocked
-- ✅ Lambda still connects to MongoDB
-- ✅ Data from Phase 1 still exists
-- ✅ New data can be inserted
-
----
-
-# Phase 3: API Gateway (Internet Access)
-
-## Files Used:
-- `main-api.tf`
-- `outputs-api.tf`
-- `lambda_function_api.py`
-- `deploy-api.sh`
-
-## Deployment Steps:
-```bash
-# 1. Deploy API Gateway version
-bash deploy-api.sh
-
-# 2. Wait for completion (~3 minutes)
-```
-
-## Expected Outputs:
-```
-ec2_private_ip = "10.0.1.123"
-lambda_function_name = "mongo-client"
-api_gateway_url = "arn:aws:execute-api:us-east-1:123456789012:abcd1234/prod/mongo"
-api_gateway_invoke_url = "https://abcd1234.execute-api.us-east-1.amazonaws.com/prod/mongo"
-```
-
-## Tests:
-```bash
-# 1. Get API URL
-API_URL=$(terraform output -raw api_gateway_invoke_url)
-echo "API URL: $API_URL"
-
-# 2. Test INSERT via curl
-curl -X POST $API_URL \
-  -H 'Content-Type: application/json' \
-  -d '{"action":"insert","data":{"name":"John","age":30,"source":"internet"}}'
-
-# Expected: {"inserted_id": "..."}
-
-# 3. Test FIND via curl
-curl -X POST $API_URL \
-  -H 'Content-Type: application/json' \
-  -d '{"action":"find","query":{}}'
-
-# Expected: {"documents": [...]} (all data from all phases)
-
-# 4. Test UPDATE via curl
-curl -X POST $API_URL \
-  -H 'Content-Type: application/json' \
-  -d '{"action":"update","query":{"name":"John"},"update":{"$set":{"age":31}}}'
-
-# Expected: {"modified_count": 1}
-
-# 5. Test DELETE via curl
-curl -X POST $API_URL \
-  -H 'Content-Type: application/json' \
-  -d '{"action":"delete","query":{"source":"internet"}}'
-
-# Expected: {"deleted_count": 1}
-
-# 6. Test CORS (from browser)
-# Open browser console and run:
-fetch('https://abcd1234.execute-api.us-east-1.amazonaws.com/prod/mongo', {
-  method: 'POST',
-  headers: {'Content-Type': 'application/json'},
-  body: JSON.stringify({action: 'find', query: {}})
-}).then(r => r.json()).then(console.log)
-```
-
-## Success Criteria:
-- ✅ API Gateway endpoint accessible from internet
-- ✅ CRUD operations work via HTTP
-- ✅ CORS headers present for browser access
-- ✅ EC2 still private (no SSH access)
-- ✅ Data persists across all phases
 
 ---
 
@@ -206,33 +160,61 @@ fetch('https://abcd1234.execute-api.us-east-1.amazonaws.com/prod/mongo', {
 
 ## Common Issues:
 
-### Phase 1:
+### SSH Connection Issues:
 ```bash
-# SSH key issues
+# Check SSH key exists
 ls -la ~/.ssh/id_rsa*
 # If missing: ssh-keygen -t rsa -b 2048 -f ~/.ssh/id_rsa -N ""
 
-# MongoDB not starting
-ssh ubuntu@<public_ip>
-sudo journalctl -u mongod -f
+# Check key permissions
+chmod 600 ~/.ssh/id_rsa
+
+# Test SSH connection
+ssh -i ~/.ssh/id_rsa ubuntu@$(terraform output -raw ec2_public_ip)
 ```
 
-### Phase 2:
+### MongoDB Issues:
 ```bash
-# Lambda timeout in VPC
-aws logs describe-log-groups --log-group-name-prefix /aws/lambda/mongo-client
-aws logs describe-log-streams --log-group-name /aws/lambda/mongo-client
+# Check MongoDB status
+ssh -i ~/.ssh/id_rsa ubuntu@$(terraform output -raw ec2_public_ip) "sudo systemctl status mongod"
+
+# View MongoDB logs
+ssh -i ~/.ssh/id_rsa ubuntu@$(terraform output -raw ec2_public_ip) "sudo journalctl -u mongod -f"
+
+# Restart MongoDB
+ssh -i ~/.ssh/id_rsa ubuntu@$(terraform output -raw ec2_public_ip) "sudo systemctl restart mongod"
 ```
 
-### Phase 3:
+### Lambda Issues:
 ```bash
-# API Gateway 502 errors
-aws logs describe-log-streams --log-group-name /aws/lambda/mongo-client
-aws logs get-log-events --log-group-name /aws/lambda/mongo-client --log-stream-name <stream>
+# Check Lambda logs
+aws logs tail /aws/lambda/mongo-client --follow
 
-# CORS issues
-curl -X OPTIONS $API_URL -v
-# Should return CORS headers
+# Test Lambda directly
+aws lambda invoke --function-name mongo-client \
+  --payload '{"httpMethod":"GET","path":"/api/health"}' \
+  response.json && cat response.json
+```
+
+### API Gateway Issues:
+```bash
+# Test health endpoint
+curl -s $(terraform output -raw api_gateway_base_url)/api/health | jq
+
+# Check CORS headers
+curl -X OPTIONS $(terraform output -raw api_gateway_base_url)/api/documents -v
+
+# Test with verbose output
+curl -v -X GET $(terraform output -raw api_gateway_base_url)/api/documents
+```
+
+### Network Issues:
+```bash
+# Check security groups
+aws ec2 describe-security-groups --group-names mongo-ec2-* mongo-lambda-*
+
+# Check VPC configuration
+aws ec2 describe-vpcs --filters "Name=tag:Name,Values=mongo-vpc"
 ```
 
 ## Cleanup:
@@ -241,23 +223,53 @@ curl -X OPTIONS $API_URL -v
 terraform destroy -auto-approve
 
 # Clean up files
-rm -f *.zip response.json terraform.tfstate*
+rm -f *.zip response.json terraform.tfstate* .terraform.lock.hcl
+rm -rf .terraform/ python/
 ```
 
 ---
 
 # Cost Estimation
 
-## Free Tier (First 12 months):
-- **EC2 t2.micro**: FREE (750 hours/month)
+## Current Setup Monthly Costs:
+
+### Free Tier (First 12 months):
+- **EC2 t3.micro**: FREE (750 hours/month)
+- **EBS 8GB**: FREE (30GB/month)
 - **Lambda**: FREE (1M requests/month)
 - **API Gateway**: FREE (1M requests/month)
-- **Data Transfer**: FREE (1GB/month)
-- **Total**: $0/month
+- **VPC/Networking**: FREE
+- **Public IP**: FREE (dynamic IP)
+- **Total**: **$0/month**
 
-## After Free Tier:
-- **EC2 t2.micro**: ~$8.50/month
-- **Lambda**: ~$0.20 per 1M requests
-- **API Gateway**: ~$3.50 per 1M requests
-- **Data Transfer**: ~$0.09/GB
-- **Total**: ~$12-15/month for light usage
+### After Free Tier:
+- **EC2 t3.micro**: $8.47/month
+- **EBS 8GB**: $0.80/month
+- **Lambda**: $0.20 per 1M requests
+- **API Gateway**: $3.50 per 1M requests
+- **Data Transfer**: $0.09/GB
+- **Total**: **~$9.27/month** (base) + usage
+
+### Production Optimizations:
+- Remove public IP: No cost change
+- Use smaller EBS volume: Save ~$0.40/month
+- Reserved Instance: Save ~30% on EC2
+- **Optimized Total**: **~$6-8/month**
+
+---
+
+# Available Endpoints
+
+## API Gateway Endpoints:
+- `GET /api/health` - Health check
+- `GET /api/documents` - List all documents
+- `GET /api/documents?filter={"status":"active"}` - Filtered documents
+- `GET /api/documents?limit=10&skip=0` - Paginated documents
+- `POST /api/documents` - Create document
+- `PUT /api/documents` - Update documents
+- `DELETE /api/documents?filter={"status":"completed"}` - Delete documents
+
+## Test Scripts:
+- `test-ec2-connectivity.sh` - EC2 and MongoDB tests
+- `test-api-enhanced.sh` - Complete API test suite
+- `debug-tests.sh` - Debug failing tests
