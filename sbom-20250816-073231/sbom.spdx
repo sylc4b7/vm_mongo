@@ -1,0 +1,42 @@
+SPDXVersion: SPDX-2.3
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+Name: VM-MongoDB-Project
+DocumentNamespace: https://vm-mongo/sbom/20250816
+Creator: Tool: asset-inventory-v1.0
+Created: 2025-08-15T23:32:31Z
+
+# Packages
+
+PackageName: dnspython
+SPDXID: SPDXRef-Package-dnspython
+PackageVersion: 2.7.0
+PackageDownloadLocation: pypi
+FilesAnalyzed: false
+PackageChecksum: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+ExternalRef: PACKAGE-MANAGER python dnspython-2.7.0
+
+PackageName: pymongo
+SPDXID: SPDXRef-Package-pymongo
+PackageVersion: 4.14.0
+PackageDownloadLocation: pypi
+FilesAnalyzed: false
+PackageChecksum: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+ExternalRef: PACKAGE-MANAGER python pymongo-4.14.0
+
+PackageName: mongodb-org
+SPDXID: SPDXRef-Package-mongodb-org
+PackageVersion: 6.0
+PackageDownloadLocation: apt
+FilesAnalyzed: false
+PackageChecksum: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+ExternalRef: PACKAGE-MANAGER system mongodb-org-6.0
