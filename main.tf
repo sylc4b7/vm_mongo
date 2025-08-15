@@ -431,13 +431,20 @@ resource "aws_api_gateway_api_key" "mongo_api_key" {
   name = "mongo-api-key"
 }
 
+# API Gateway Stage
+resource "aws_api_gateway_stage" "mongo_api_stage" {
+  deployment_id = aws_api_gateway_deployment.mongo_api.id
+  rest_api_id   = aws_api_gateway_rest_api.mongo_api.id
+  stage_name    = "prod"
+}
+
 # Usage Plan
 resource "aws_api_gateway_usage_plan" "mongo_usage_plan" {
   name = "mongo-basic-plan"
   
   api_stages {
     api_id = aws_api_gateway_rest_api.mongo_api.id
-    stage  = aws_api_gateway_deployment.mongo_api.stage_name
+    stage  = aws_api_gateway_stage.mongo_api_stage.stage_name
   }
   
   throttle_settings {
@@ -469,5 +476,4 @@ resource "aws_api_gateway_deployment" "mongo_api" {
   ]
   
   rest_api_id = aws_api_gateway_rest_api.mongo_api.id
-  stage_name  = "prod"
 }
