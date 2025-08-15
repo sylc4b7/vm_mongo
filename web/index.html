@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MongoDB CRUD App</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 3px; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .delete-btn { background: #dc3545; }
+        .delete-btn:hover { background: #c82333; }
+        .update-btn { background: #28a745; }
+        .update-btn:hover { background: #218838; }
+        .document { border: 1px solid #eee; padding: 10px; margin: 10px 0; border-radius: 3px; }
+        .error { color: red; }
+        .success { color: green; }
+        #apiKey { font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MongoDB CRUD Application</h1>
+        
+        <!-- API Configuration -->
+        <div class="section">
+            <h2>API Configuration</h2>
+            <div class="form-group">
+                <label for="apiUrl">API Base URL:</label>
+                <input type="text" id="apiUrl" value="https://5crqbngzz8.execute-api.us-east-1.amazonaws.com/prod" placeholder="Enter API Gateway URL">
+            </div>
+            <div class="form-group">
+                <label for="apiKey">API Key:</label>
+                <input type="password" id="apiKey" placeholder="Enter your API Key">
+                <button onclick="toggleApiKey()">Show/Hide</button>
+            </div>
+            <button onclick="testConnection()">Test Connection</button>
+            <div id="connectionStatus"></div>
+        </div>
+
+        <!-- Create Document -->
+        <div class="section">
+            <h2>Create Document</h2>
+            <div class="form-group">
+                <label for="createName">Name:</label>
+                <input type="text" id="createName" placeholder="Document name">
+            </div>
+            <div class="form-group">
+                <label for="createStatus">Status:</label>
+                <select id="createStatus">
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="createCategory">Category:</label>
+                <input type="text" id="createCategory" placeholder="Category">
+            </div>
+            <div class="form-group">
+                <label for="createPriority">Priority:</label>
+                <input type="number" id="createPriority" value="1" min="1" max="10">
+            </div>
+            <button onclick="createDocument()">Create Document</button>
+            <div id="createResult"></div>
+        </div>
+
+        <!-- Read Documents -->
+        <div class="section">
+            <h2>Read Documents</h2>
+            <div class="form-group">
+                <label for="filterStatus">Filter by Status:</label>
+                <select id="filterStatus">
+                    <option value="">All</option>
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="limitDocs">Limit:</label>
+                <input type="number" id="limitDocs" value="10" min="1" max="100">
+            </div>
+            <button onclick="loadDocuments()">Load Documents</button>
+            <button onclick="loadDocuments(true)">Refresh</button>
+            <div id="documentsContainer"></div>
+        </div>
+
+        <!-- Update Documents -->
+        <div class="section">
+            <h2>Bulk Update Documents</h2>
+            <div class="form-group">
+                <label for="updateQuery">Query (JSON):</label>
+                <textarea id="updateQuery" rows="3" placeholder='{"status": "pending"}'></textarea>
+            </div>
+            <div class="form-group">
+                <label for="updateData">Update (JSON):</label>
+                <textarea id="updateData" rows="3" placeholder='{"$set": {"status": "completed"}}'></textarea>
+            </div>
+            <button onclick="updateDocuments()" class="update-btn">Update Documents</button>
+            <div id="updateResult"></div>
+        </div>
+
+        <!-- Delete Documents -->
+        <div class="section">
+            <h2>Delete Documents</h2>
+            <div class="form-group">
+                <label for="deleteQuery">Query (JSON):</label>
+                <textarea id="deleteQuery" rows="3" placeholder='{"status": "completed"}'></textarea>
+            </div>
+            <button onclick="deleteDocuments()" class="delete-btn">Delete Documents</button>
+            <div id="deleteResult"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -26,24 +26,35 @@ output "api_gateway_base_url" {
 output "api_endpoints" {
   description = "Available API endpoints for testing"
   value = {
-    health_check = "https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/health"
-    documents_base = "https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents"
+    health_check = "https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/health (no auth required)"
+    documents_base = "https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents (API key required)"
   }
 }
 
+output "api_key_id" {
+  description = "API Gateway API Key ID"
+  value       = aws_api_gateway_api_key.mongo_api_key.id
+}
+
+output "api_key_value" {
+  description = "API Gateway API Key Value"
+  value       = aws_api_gateway_api_key.mongo_api_key.value
+  sensitive   = true
+}
+
 output "curl_examples" {
-  description = "Example curl commands for testing"
+  description = "Example curl commands for testing with API key"
   value = {
     health_check = "curl -X GET https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/health"
     
-    create_document = "curl -X POST https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents -H 'Content-Type: application/json' -d '{\"name\":\"test\",\"status\":\"active\"}'"
+    create_document = "curl -X POST https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents -H 'Content-Type: application/json' -H 'X-API-Key: YOUR_API_KEY' -d '{\"name\":\"test\",\"status\":\"active\"}'"
     
-    get_all_documents = "curl -X GET https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents"
+    get_all_documents = "curl -X GET https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents -H 'X-API-Key: YOUR_API_KEY'"
     
-    get_filtered_documents = "curl -X GET 'https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents?filter={\"status\":\"active\"}'"
+    get_filtered_documents = "curl -X GET 'https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents?filter={\"status\":\"active\"}' -H 'X-API-Key: YOUR_API_KEY'"
     
-    update_documents = "curl -X PUT https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents -H 'Content-Type: application/json' -d '{\"query\":{\"status\":\"active\"},\"update\":{\"$set\":{\"status\":\"completed\"}}}'"
+    update_documents = "curl -X PUT https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents -H 'Content-Type: application/json' -H 'X-API-Key: YOUR_API_KEY' -d '{\"query\":{\"status\":\"active\"},\"update\":{\"$set\":{\"status\":\"completed\"}}}'"
     
-    delete_documents = "curl -X DELETE 'https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents?filter={\"status\":\"completed\"}'"
+    delete_documents = "curl -X DELETE 'https://${aws_api_gateway_rest_api.mongo_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/documents?filter={\"status\":\"completed\"}' -H 'X-API-Key: YOUR_API_KEY'"
   }
 }

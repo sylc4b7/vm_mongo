@@ -19,8 +19,9 @@ test_result() {
     fi
 }
 
-# Get API Gateway URL from Terraform output
+# Get API Gateway URL and API Key from Terraform output
 API_BASE_URL=$(terraform output -raw api_gateway_base_url 2>/dev/null)
+API_KEY=$(terraform output -raw api_key_value 2>/dev/null)
 
 if [ -z "$API_BASE_URL" ]; then
     echo -e "${RED}Error: Could not get API Gateway URL from Terraform outputs${NC}"
@@ -28,7 +29,14 @@ if [ -z "$API_BASE_URL" ]; then
     exit 1
 fi
 
+if [ -z "$API_KEY" ]; then
+    echo -e "${RED}Error: Could not get API Key from Terraform outputs${NC}"
+    echo "Make sure you've deployed the infrastructure with: terraform apply"
+    exit 1
+fi
+
 echo -e "${BLUE}API Base URL: $API_BASE_URL${NC}"
+echo -e "${BLUE}API Key: ${API_KEY:0:10}...${NC}"
 echo ""
 
 # Test 1: Health Check
@@ -58,6 +66,7 @@ DOCUMENTS_URL="$API_BASE_URL/api/documents"
 echo "Creating document 1..."
 RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST "$DOCUMENTS_URL" \
     -H 'Content-Type: application/json' \
+    -H "X-API-Key: $API_KEY" \
     -d '{"name":"Test Document 1","status":"active","category":"test","priority":1}')
 
 HTTP_STATUS=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
@@ -76,6 +85,7 @@ fi
 echo "Creating document 2..."
 RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST "$DOCUMENTS_URL" \
     -H 'Content-Type: application/json' \
+    -H "X-API-Key: $API_KEY" \
     -d '{"name":"Test Document 2","status":"pending","category":"test","priority":2}')
 
 HTTP_STATUS=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
@@ -93,7 +103,8 @@ echo ""
 echo -e "${YELLOW}=== TEST 3: GET ALL DOCUMENTS ===${NC}"
 echo "Testing: GET $DOCUMENTS_URL"
 
-RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X GET "$DOCUMENTS_URL")
+RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X GET "$DOCUMENTS_URL" \
+    -H "X-API-Key: $API_KEY")
 HTTP_STATUS=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
 RESPONSE_BODY=$(echo $RESPONSE | sed -e 's/HTTPSTATUS:.*//g')
 
@@ -114,7 +125,9 @@ echo -e "${YELLOW}=== TEST 4: GET FILTERED DOCUMENTS ===${NC}"
 FILTER_JSON='{"status":"active"}'
 echo "Testing: GET $DOCUMENTS_URL?filter=$FILTER_JSON"
 
-RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X GET "$DOCUMENTS_URL" --data-urlencode "filter=$FILTER_JSON" -G)
+RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X GET "$DOCUMENTS_URL" \
+    -H "X-API-Key: $API_KEY" \
+    --data-urlencode "filter=$FILTER_JSON" -G)
 HTTP_STATUS=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
 RESPONSE_BODY=$(echo $RESPONSE | sed -e 's/HTTPSTATUS:.*//g')
 
@@ -135,6 +148,7 @@ echo "Updating documents with status 'pending' to 'in-progress'..."
 
 RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X PUT "$DOCUMENTS_URL" \
     -H 'Content-Type: application/json' \
+    -H "X-API-Key: $API_KEY" \
     -d '{"query":{"status":"pending"},"update":{"$set":{"status":"in-progress","updated_by":"test-script"}}}')
 
 HTTP_STATUS=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
@@ -156,7 +170,8 @@ echo -e "${YELLOW}=== TEST 6: PAGINATION ===${NC}"
 PAGINATION_URL="$DOCUMENTS_URL?limit=1&skip=0"
 echo "Testing: GET $PAGINATION_URL"
 
-RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X GET "$PAGINATION_URL")
+RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X GET "$PAGINATION_URL" \
+    -H "X-API-Key: $API_KEY")
 HTTP_STATUS=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
 RESPONSE_BODY=$(echo $RESPONSE | sed -e 's/HTTPSTATUS:.*//g')
 
@@ -214,7 +229,9 @@ echo -e "${YELLOW}=== TEST 9: DELETE DOCUMENTS ===${NC}"
 DELETE_FILTER_JSON='{"category":"test"}'
 echo "Deleting test documents..."
 
-RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X DELETE "$DOCUMENTS_URL" --data-urlencode "filter=$DELETE_FILTER_JSON" -G)
+RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X DELETE "$DOCUMENTS_URL" \
+    -H "X-API-Key: $API_KEY" \
+    --data-urlencode "filter=$DELETE_FILTER_JSON" -G)
 HTTP_STATUS=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
 RESPONSE_BODY=$(echo $RESPONSE | sed -e 's/HTTPSTATUS:.*//g')
 
@@ -248,18 +265,20 @@ echo ""
 echo "# Create a document"
 echo "curl -X POST $API_BASE_URL/api/documents \\"
 echo "  -H 'Content-Type: application/json' \\"
+echo "  -H 'X-API-Key: $API_KEY' \\"
 echo "  -d '{\"name\":\"My Document\",\"status\":\"active\"}'"
 echo ""
 echo "# Get all documents"
-echo "curl -X GET $API_BASE_URL/api/documents"
+echo "curl -X GET $API_BASE_URL/api/documents -H 'X-API-Key: $API_KEY'"
 echo ""
 echo "# Get filtered documents"
-echo "curl -X GET '$API_BASE_URL/api/documents?filter={\"status\":\"active\"}'"
+echo "curl -X GET '$API_BASE_URL/api/documents?filter={\"status\":\"active\"}' -H 'X-API-Key: $API_KEY'"
 echo ""
 echo "# Update documents"
 echo "curl -X PUT $API_BASE_URL/api/documents \\"
 echo "  -H 'Content-Type: application/json' \\"
+echo "  -H 'X-API-Key: $API_KEY' \\"
 echo "  -d '{\"query\":{\"status\":\"active\"},\"update\":{\"\$set\":{\"status\":\"completed\"}}}'"
 echo ""
 echo "# Delete documents"
-echo "curl -X DELETE '$API_BASE_URL/api/documents?filter={\"status\":\"completed\"}'"
+echo "curl -X DELETE '$API_BASE_URL/api/documents?filter={\"status\":\"completed\"}' -H 'X-API-Key: $API_KEY'"

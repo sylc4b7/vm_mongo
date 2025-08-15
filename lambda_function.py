@@ -163,7 +163,7 @@ def handle_get_documents(collection, query_params, cors_headers):
                 'limit': limit,
                 'skip': skip,
                 'count': len(docs)
-            })
+            }, default=str)
         }
     except Exception as e:
         return {

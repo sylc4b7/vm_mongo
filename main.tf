@@ -232,6 +232,7 @@ resource "aws_api_gateway_method" "documents_get" {
   resource_id   = aws_api_gateway_resource.documents.id
   http_method   = "GET"
   authorization = "NONE"
+  api_key_required = true
 }
 
 # POST /api/documents (create)
@@ -240,6 +241,7 @@ resource "aws_api_gateway_method" "documents_post" {
   resource_id   = aws_api_gateway_resource.documents.id
   http_method   = "POST"
   authorization = "NONE"
+  api_key_required = true
 }
 
 # PUT /api/documents (update)
@@ -248,6 +250,7 @@ resource "aws_api_gateway_method" "documents_put" {
   resource_id   = aws_api_gateway_resource.documents.id
   http_method   = "PUT"
   authorization = "NONE"
+  api_key_required = true
 }
 
 # DELETE /api/documents (delete)
@@ -256,6 +259,7 @@ resource "aws_api_gateway_method" "documents_delete" {
   resource_id   = aws_api_gateway_resource.documents.id
   http_method   = "DELETE"
   authorization = "NONE"
+  api_key_required = true
 }
 
 # GET /api/health (health check)
@@ -420,6 +424,33 @@ resource "aws_lambda_permission" "api_gw" {
   function_name = aws_lambda_function.mongo_client.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.mongo_api.execution_arn}/*/*"
+}
+
+# API Key for Authentication
+resource "aws_api_gateway_api_key" "mongo_api_key" {
+  name = "mongo-api-key"
+}
+
+# Usage Plan
+resource "aws_api_gateway_usage_plan" "mongo_usage_plan" {
+  name = "mongo-basic-plan"
+  
+  api_stages {
+    api_id = aws_api_gateway_rest_api.mongo_api.id
+    stage  = aws_api_gateway_deployment.mongo_api.stage_name
+  }
+  
+  throttle_settings {
+    rate_limit  = 100
+    burst_limit = 200
+  }
+}
+
+# Link API Key to Usage Plan
+resource "aws_api_gateway_usage_plan_key" "mongo_usage_plan_key" {
+  key_id        = aws_api_gateway_api_key.mongo_api_key.id
+  key_type      = "API_KEY"
+  usage_plan_id = aws_api_gateway_usage_plan.mongo_usage_plan.id
 }
 
 # API Gateway Deployment
